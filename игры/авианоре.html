@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Авианоре</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            width: 100%; height: 100%; overflow: hidden;
+            background: #000;
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(180deg, #0a0a2e 0%, #1a1a4e 50%, #0a0a2e 100%);
+        }
+        #gameCanvas {
+            width: 100vh;
+            max-width: 100vw;
+            height: 100vw;
+            max-height: 100vh;
+            background: linear-gradient(180deg, #0a1628 0%, #1a3a5c 50%, #0a1628 100%);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let W, H;
+        function resize() {
+            if (window.innerHeight > window.innerWidth) {
+                W = window.innerWidth;
+                H = window.innerWidth * 0.5625;
+            } else {
+                W = window.innerHeight * 1.777;
+                H = window.innerHeight;
+            }
+            canvas.width = W;
+            canvas.height = H;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+        
+        const player = { x: 0, y: 0, w: 0, h: 0, vy: 0 };
+        let bullets = [];
+        let enemies = [];
+        let particles = [];
+        let score = 0;
+        let highscore = localStorage.getItem('aviaHigh') || 0;
+        let gameOver = false;
+        let lastTime = 0;
+        
+        function init() {
+            player.x = W * 0.15;
+            player.y = H * 0.5;
+            player.w = W * 0.08;
+            player.h = H * 0.08;
+            player.vy = 0;
+            bullets = [];
+            enemies = [];
+            particles = [];
+            score = 0;
+            gameOver = false;
+        }
+        
+        function spawnEnemy() {
+            const size = W * (0.04 + Math.random() * 0.03);
+            enemies.push({
+                x: W + size,
+                y: Math.random() * (H - size),
+                w: size,
+                h: size,
+                speed: W * (0.003 + Math.random() * 0.004)
+            });
+        }
+        
+        function createExplosion(x, y, color) {
+            for (let i = 0; i < 10; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = W * (0.002 + Math.random() * 0.003);
+                particles.push({
+                    x, y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 1,
+                    color
+                });
+            }
+        }
+        
+        function drawPlane(x, y, w, h, color = '#4ade80') {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(x + w, y + h * 0.5);
+            ctx.lineTo(x, y);
+            ctx.lineTo(x + w * 0.3, y + h * 0.5);
+            ctx.lineTo(x, y + h);
+            ctx.closePath();
+            ctx.fill();
+            
+            ctx.fillStyle = '#22c55e';
+            ctx.fillRect(x + w * 0.1, y + h * 0.3, w * 0.4, h * 0.15);
+        }
+        
+        function draw() {
+            ctx.fillStyle = '#0a1628';
+            ctx.fillRect(0, 0, W, H);
+            
+            const gradient = ctx.createLinearGradient(0, 0, 0, H);
+            gradient.addColorStop(0, '#0a1628');
+            gradient.addColorStop(0.5, '#1a3a5c');
+            gradient.addColorStop(1, '#0a1628');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, W, H);
+            
+            for (let i = 0; i < 5; i++) {
+                ctx.fillStyle = `rgba(255,255,255,${0.1 + i * 0.05})`;
+                ctx.fillRect(W * 0.1 * i, H * 0.2, W * 0.02, W * 0.02);
+            }
+            
+            for (let b of bullets) {
+                ctx.fillStyle = '#fbbf24';
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            for (let e of enemies) {
+                drawPlane(e.x, e.y, e.w, e.h, '#ef4444');
+            }
+            
+            for (let p of particles) {
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, W * 0.01, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+            
+            if (!gameOver) {
+                drawPlane(player.x, player.y, player.w, player.h);
+            }
+            
+            ctx.fillStyle = '#fff';
+            ctx.font = `bold ${W * 0.04}px sans-serif`;
+            ctx.textAlign = 'left';
+            ctx.fillText(score, W * 0.02, H * 0.08);
+            
+            ctx.font = `${W * 0.025}px sans-serif`;
+            ctx.fillStyle = '#888';
+            ctx.fillText(`Рек: ${highscore}`, W * 0.02, H * 0.14);
+            
+            if (gameOver) {
+                ctx.fillStyle = 'rgba(0,0,0,0.7)';
+                ctx.fillRect(0, 0, W, H);
+                
+                ctx.fillStyle = '#fff';
+                ctx.font = `bold ${W * 0.1}px sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.fillText('ИГРА ОКОНЧЕНА', W * 0.5, H * 0.4);
+                
+                ctx.font = `${W * 0.05}px sans-serif`;
+                ctx.fillText(`Счёт: ${score}`, W * 0.5, H * 0.52);
+                
+                ctx.fillStyle = '#fbbf24';
+                ctx.fillText(`Рекорд: ${highscore}`, W * 0.5, H * 0.6);
+                
+                ctx.fillStyle = '#4ade80';
+                ctx.fillText('Тапни для рестарта', W * 0.5, H * 0.72);
+            }
+        }
+        
+        let spawnTimer = 0;
+        function update(time) {
+            const dt = Math.min(time - lastTime, 50);
+            lastTime = time;
+            
+            if (gameOver) {
+                draw();
+                requestAnimationFrame(update);
+                return;
+            }
+            
+            player.vy *= 0.9;
+            player.y += player.vy;
+            player.y = Math.max(player.h * 0.5, Math.min(H - player.h * 0.5, player.y));
+            
+            spawnTimer += dt;
+            if (spawnTimer > 800) {
+                spawnEnemy();
+                spawnTimer = 0;
+            }
+            
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                bullets[i].x += bullets[i].speed * dt;
+                if (bullets[i].x > W) bullets.splice(i, 1);
+            }
+            
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                enemies[i].x -= enemies[i].speed * dt;
+                
+                if (enemies[i].x + enemies[i].w < 0) {
+                    enemies.splice(i, 1);
+                    continue;
+                }
+                
+                for (let j = bullets.length - 1; j >= 0; j--) {
+                    const b = bullets[j];
+                    const e = enemies[i];
+                    if (b.x > e.x && b.x < e.x + e.w && b.y > e.y && b.y < e.y + e.h) {
+                        createExplosion(e.x + e.w * 0.5, e.y + e.h * 0.5, '#fbbf24');
+                        score += 10;
+                        if (score > highscore) {
+                            highscore = score;
+                            localStorage.setItem('aviaHigh', highscore);
+                        }
+                        bullets.splice(j, 1);
+                        enemies.splice(i, 1);
+                        break;
+                    }
+                }
+            }
+            
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const e = enemies[i];
+                if (player.x < e.x + e.w && player.x + player.w > e.x &&
+                    player.y < e.y + e.h && player.y + player.h > e.y) {
+                    createExplosion(player.x, player.y, '#ef4444');
+                    gameOver = true;
+                }
+            }
+            
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].x += particles[i].vx * dt;
+                particles[i].y += particles[i].vy * dt;
+                particles[i].life -= 0.02;
+                if (particles[i].life <= 0) particles.splice(i, 1);
+            }
+            
+            draw();
+            requestAnimationFrame(update);
+        }
+        
+        let touchY = null;
+        canvas.addEventListener('touchstart', e => {
+            e.preventDefault();
+            if (gameOver) {
+                init();
+                return;
+            }
+            const touch = e.touches[0];
+            touchY = touch.clientY;
+            bullets.push({
+                x: player.x + player.w,
+                y: player.y + player.h * 0.5,
+                r: W * 0.015,
+                speed: W * 0.015
+            });
+        });
+        
+        canvas.addEventListener('touchmove', e => {
+            e.preventDefault();
+            if (touchY !== null && !gameOver) {
+                const touch = e.touches[0];
+                const dy = touch.clientY - touchY;
+                player.vy = dy * 2;
+                touchY = touch.clientY;
+            }
+        });
+        
+        canvas.addEventListener('touchend', e => {
+            touchY = null;
+        });
+        
+        canvas.addEventListener('click', () => {
+            if (gameOver) {
+                init();
+                return;
+            }
+            bullets.push({
+                x: player.x + player.w,
+                y: player.y + player.h * 0.5,
+                r: W * 0.015,
+                speed: W * 0.015
+            });
+        });
+        
+        init();
+        requestAnimationFrame(update);
+    </script>
+</body>
+</html>
