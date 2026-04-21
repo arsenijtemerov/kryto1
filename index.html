@@ -303,15 +303,16 @@
             gameState.spots.push(newSpot);
         }
         
-        function spawnZombie(hp) {
+        function spawnZombie(hp, isBoss = false) {
             const zombie = {
                 x: path[0].x,
-                y: path[0].y,
+                y: path[0].y + (Math.random() - 0.5) * 30,
                 hp: hp,
                 maxHp: hp,
-                speed: 1 + gameState.level * 0.2,
+                speed: isBoss ? 0.5 : (1 + gameState.level * 0.2),
                 pathIndex: 0,
-                dead: false
+                dead: false,
+                isBoss: isBoss
             };
             gameState.zombies.push(zombie);
             updateHUD();
