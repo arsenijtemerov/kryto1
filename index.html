@@ -481,16 +481,17 @@
                     return;
                 }
                 
-                const dx = target.x - zombie.x;
-                const dy = target.y - zombie.y;
-                const dist = Math.hypot(dx, dy);
+                const baseY = target.y;
+                const dy = baseY - zombie.y;
+                const speed = zombie.speed;
                 
-                if (dist < zombie.speed) {
+                if (Math.abs(dy) < speed) {
                     zombie.pathIndex++;
+                    zombie.y = target.y;
                 } else {
-                    zombie.x += (dx / dist) * zombie.speed;
-                    zombie.y += (dy / dist) * zombie.speed;
+                    zombie.y += Math.sign(dy) * speed;
                 }
+                zombie.x += speed;
             }
             
             gameState.zombies = gameState.zombies.filter(z => !z.dead);
