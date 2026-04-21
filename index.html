@@ -200,7 +200,7 @@
             zombiesSpawned: 0,
             spawnTimer: null,
             waveInProgress: false,
-            coins: 15,
+            coins: 20,
             selectedTower: null,
             towers: [],
             zombies: [],
@@ -427,22 +427,19 @@
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
             
-            const upgradeCosts = [50, 100, 150];
-            
             for (let i = 0; i < gameState.towers.length; i++) {
                 const tower = gameState.towers[i];
                 const dist = Math.hypot(x - tower.x, y - tower.y);
                 if (dist < 25) {
-                    if (tower.level >= 4) return;
+                    const baseCost = towerTypes[tower.type].cost;
+                    const sellPrice = Math.floor(baseCost * tower.level * 0.5);
+                    gameState.coins += sellPrice;
                     
-                    const upgradeCost = upgradeCosts[tower.level - 1];
+                    const spotIndex = gameState.spots.findIndex(s => s.x === tower.x && s.y === tower.y);
+                    if (spotIndex >= 0) gameState.spots[spotIndex].hasTower = false;
                     
-                    if (gameState.coins >= upgradeCost) {
-                        gameState.coins -= upgradeCost;
-                        tower.level++;
-                        tower.cooldown = 0;
-                        updateHUD();
-                    }
+                    gameState.towers.splice(i, 1);
+                    updateHUD();
                     return;
                 }
             }
