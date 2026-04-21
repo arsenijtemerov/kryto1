@@ -173,6 +173,14 @@
                 <div class="tower-name">Лучник</div>
                 <div class="tower-cost">10 монет</div>
             </button>
+            <button class="tower-btn" id="btnSell" onclick="selectTower('sell')">
+                <div class="tower-name">Удалить</div>
+                <div class="tower-cost">+50%</div>
+            </button>
+            <button class="tower-btn" id="btnUpgrade" onclick="selectTower('upgrade')">
+                <div class="tower-name">Улучшить</div>
+                <div class="tower-cost">50/100/150</div>
+            </button>
         </div>
         <div id="message">
             <div id="messageText"></div>
@@ -203,9 +211,9 @@
         };
         
         const towerTypes = {
-            catapult: { cost: 60, damage: 40, range: 150, fireRate: 60, color: '#8B4513', name: 'Катапульта' },
-            crossbow: { cost: 25, damage: 20, range: 120, fireRate: 30, color: '#FFD700', name: 'Арбалет' },
-            archer: { cost: 10, damage: 10, range: 100, fireRate: 20, color: '#228B22', name: 'Лучник' }
+            catapult: { cost: 60, damage: 40, range: 150, fireRate: 120, color: '#8B4513', name: 'Катапульта' },
+            crossbow: { cost: 25, damage: 15, range: 120, fireRate: 60, color: '#FFD700', name: 'Арбалет' },
+            archer: { cost: 10, damage: 8, range: 100, fireRate: 40, color: '#228B22', name: 'Лучник' }
         };
         
         const path = [
@@ -309,7 +317,7 @@
                 y: path[0].y + (Math.random() - 0.5) * 30,
                 hp: hp,
                 maxHp: hp,
-                speed: isBoss ? 0.5 : (1 + gameState.level * 0.2),
+                speed: isBoss ? 0.3 : (0.5 + gameState.level * 0.1),
                 pathIndex: 0,
                 dead: false,
                 isBoss: isBoss
@@ -331,11 +339,58 @@
         }
         
         canvas.addEventListener('click', (e) => {
-            if (gameState.gameOver || !gameState.selectedTower) return;
+            if (gameState.gameOver) return;
             
             const rect = canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
+            
+            if (gameState.selectedTower === 'sell') {
+                for (let i = 0; i < gameState.towers.length; i++) {
+                    const tower = gameState.towers[i];
+                    const dist = Math.hypot(x - tower.x, y - tower.y);
+                    if (dist < 25) {
+                        const baseCost = towerTypes[tower.type].cost;
+                        const levelCost = baseCost * tower.level;
+                        const sellPrice = Math.floor(levelCost * 0.5);
+                        gameState.coins += sellPrice;
+                        
+                        const spotIndex = gameState.spots.findIndex(s => s.x === tower.x && s.y === tower.y);
+                        if (spotIndex >= 0) gameState.spots[spotIndex].hasTower = false;
+                        
+                        gameState.towers.splice(i, 1);
+                        
+                        gameState.selectedTower = null;
+                        document.querySelectorAll('.tower-btn').forEach(btn => btn.classList.remove('selected'));
+                        updateHUD();
+                        return;
+                    }
+                }
+                return;
+            }
+            
+            if (!gameState.selectedTower) return;
+            
+            if (gameState.selectedTower === 'upgrade') {
+                for (let tower of gameState.towers) {
+                    const dist = Math.hypot(x - tower.x, y - tower.y);
+                    if (dist < 25) {
+                        const upgradeCosts = [50, 100, 150];
+                        if (tower.level >= 4) return;
+                        
+                        const upgradeCost = upgradeCosts[tower.level - 1];
+                        
+                        if (gameState.coins >= upgradeCost) {
+                            gameState.coins -= upgradeCost;
+                            tower.level++;
+                            tower.cooldown = 0;
+                            updateHUD();
+                        }
+                        return;
+                    }
+                }
+                return;
+            }
             
             for (let spot of gameState.spots) {
                 if (!spot.hasTower) {
@@ -349,6 +404,7 @@
                                 x: spot.x,
                                 y: spot.y,
                                 type: gameState.selectedTower,
+                                level: 1,
                                 cooldown: 0,
                                 target: null
                             });
@@ -359,6 +415,35 @@
                         }
                         return;
                     }
+                }
+            }
+        });
+        
+        canvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            if (gameState.gameOver) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            const upgradeCosts = [50, 100, 150];
+            
+            for (let i = 0; i < gameState.towers.length; i++) {
+                const tower = gameState.towers[i];
+                const dist = Math.hypot(x - tower.x, y - tower.y);
+                if (dist < 25) {
+                    if (tower.level >= 4) return;
+                    
+                    const upgradeCost = upgradeCosts[tower.level - 1];
+                    
+                    if (gameState.coins >= upgradeCost) {
+                        gameState.coins -= upgradeCost;
+                        tower.level++;
+                        tower.cooldown = 0;
+                        updateHUD();
+                    }
+                    return;
                 }
             }
         });
@@ -419,16 +504,20 @@
                 ctx.arc(tower.x, tower.y, 20, 0, Math.PI * 2);
                 ctx.fill();
                 
-                ctx.strokeStyle = '#fff';
-                ctx.lineWidth = 2;
+                const levelColors = ['#888', '#00ff00', '#ffd700', '#ff6600', '#ff0000'];
+                ctx.strokeStyle = levelColors[tower.level - 1] || '#fff';
+                ctx.lineWidth = 3;
                 ctx.stroke();
                 
                 ctx.fillStyle = '#fff';
-                ctx.font = 'bold 12px Arial';
+                ctx.font = 'bold 10px Arial';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 const icon = tower.type === 'catapult' ? 'К' : tower.type === 'crossbow' ? 'А' : 'Л';
                 ctx.fillText(icon, tower.x, tower.y);
+                
+                ctx.font = 'bold 8px Arial';
+                ctx.fillText('Lv' + tower.level, tower.x, tower.y + 12);
             }
         }
         
@@ -508,6 +597,9 @@
                     continue;
                 }
                 
+                const levelMultiplier = 0.5 + tower.level * 0.5;
+                const cooldownDivisor = 0.5 + tower.level * 0.25;
+                
                 let closestZombie = null;
                 let closestDist = type.range;
                 
@@ -521,7 +613,7 @@
                 
                 if (closestZombie) {
                     tower.target = closestZombie;
-                    tower.cooldown = type.fireRate;
+                    tower.cooldown = type.fireRate / cooldownDivisor;
                     
                     gameState.projectiles.push({
                         x: tower.x,
@@ -530,7 +622,7 @@
                         targetY: closestZombie.y,
                         target: closestZombie,
                         speed: 8,
-                        damage: type.damage,
+                        damage: type.damage * levelMultiplier,
                         color: type.color
                     });
                 }
