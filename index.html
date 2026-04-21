@@ -260,15 +260,15 @@
             
             gameState.currentWave++;
             
-            const zombiesInWave = 3 + gameState.currentWave * 2;
             const hp = 20 + gameState.currentWave * 10;
+            const spawnInterval = gameState.level === 1 ? 3000 : gameState.level === 2 ? 2000 : 1500;
             
-            for (let i = 0; i < zombiesInWave; i++) {
+            for (let i = 0; i < 2; i++) {
                 setTimeout(() => {
                     if (!gameState.gameOver) {
                         spawnZombie(hp);
                     }
-                }, i * 800);
+                }, i * spawnInterval);
             }
             
             if (gameState.currentWave >= 2 && gameState.currentWave % 2 === 0) {
@@ -550,14 +550,12 @@
             if (gameState.currentWave >= gameState.waves && gameState.zombies.length === 0 && !gameState.gameOver && !gameState.victory) {
                 gameState.victory = true;
                 showMessage('Победа! Все волны пройдены!');
-            }
-            
-            if (gameState.zombies.length === 0 && gameState.currentWave < gameState.waves && !gameState.gameOver && !gameState.victory) {
+            } else if (gameState.zombies.length === 0 && gameState.currentWave < gameState.waves && !gameState.gameOver && !gameState.victory) {
                 setTimeout(() => {
                     if (!gameState.gameOver && !gameState.victory) {
                         startWave();
                     }
-                }, 2000);
+                }, 3000);
             }
         }
         
