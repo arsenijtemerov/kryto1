@@ -421,25 +421,32 @@
         
         canvas.addEventListener('contextmenu', (e) => {
             e.preventDefault();
+            console.log("Right click!");
             if (gameState.gameOver) return;
             
             const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
             
-            for (let i = 0; i < gameState.towers.length; i++) {
+            for (let i = gameState.towers.length - 1; i >= 0; i--) {
                 const tower = gameState.towers[i];
-                const dist = Math.hypot(x - tower.x, y - tower.y);
-                if (dist < 25) {
+                const dist = Math.sqrt((clickX - tower.x) ** 2 + (clickY - tower.y) ** 2);
+                
+                if (dist < 30) {
                     const baseCost = towerTypes[tower.type].cost;
                     const sellPrice = Math.floor(baseCost * tower.level * 0.5);
                     gameState.coins += sellPrice;
                     
-                    const spotIndex = gameState.spots.findIndex(s => s.x === tower.x && s.y === tower.y);
-                    if (spotIndex >= 0) gameState.spots[spotIndex].hasTower = false;
+                    for (let spot of gameState.spots) {
+                        if (spot.x === tower.x && spot.y === tower.y) {
+                            spot.hasTower = false;
+                            break;
+                        }
+                    }
                     
                     gameState.towers.splice(i, 1);
                     updateHUD();
+                    console.log("Tower sold for " + sellPrice);
                     return;
                 }
             }
