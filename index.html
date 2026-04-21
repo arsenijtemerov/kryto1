@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Игровой портал</title>
+    <title>Таверн Дефенс</title>
     <style>
         * {
             margin: 0;
@@ -17,49 +17,577 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            overflow: hidden;
         }
-        .container {
+        #gameContainer {
+            position: relative;
+            display: none;
+        }
+        #levelSelect {
             text-align: center;
             padding: 40px;
         }
-        h1 {
+        #levelSelect h1 {
             color: #fff;
             font-size: 3rem;
             margin-bottom: 40px;
             text-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
         }
-        .menu {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-        .menu-item {
-            display: block;
+        .level-btn {
+            display: inline-block;
             padding: 20px 40px;
+            margin: 10px;
             background: linear-gradient(45deg, #0f3460, #1a1a2e);
             color: #fff;
-            text-decoration: none;
             font-size: 1.5rem;
             border-radius: 10px;
+            cursor: pointer;
             transition: all 0.3s ease;
             border: 2px solid transparent;
         }
-        .menu-item:hover {
+        .level-btn:hover {
             transform: scale(1.05);
             border-color: #00d4ff;
             box-shadow: 0 0 30px rgba(0, 212, 255, 0.3);
         }
-        .menu-item.game {
+        #gameCanvas {
+            border: 3px solid #00d4ff;
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.3);
+        }
+        #hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            color: #fff;
+            font-size: 20px;
+            text-shadow: 2px 2px 4px #000;
+        }
+        .hud-item {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 2px solid #00d4ff;
+        }
+        #towerSelect {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #00d4ff;
+        }
+        .tower-btn {
+            padding: 15px 20px;
+            background: linear-gradient(45deg, #0f3460, #1a1a2e);
+            color: #fff;
+            border: 2px solid transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+        .tower-btn:hover {
+            border-color: #00d4ff;
+            transform: scale(1.05);
+        }
+        .tower-btn.selected {
+            border-color: #00ff00;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+        }
+        .tower-btn.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .tower-name {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .tower-cost {
+            font-size: 14px;
+            color: #ffd700;
+        }
+        #message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            padding: 30px 50px;
+            border-radius: 15px;
+            border: 3px solid #00d4ff;
+            font-size: 24px;
+            text-align: center;
+            display: none;
+        }
+        #restartBtn {
+            margin-top: 20px;
+            padding: 15px 30px;
             background: linear-gradient(45deg, #e94560, #0f3460);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        #restartBtn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(233, 69, 96, 0.5);
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🎮 Игровой портал</h1>
-        <div class="menu">
-            <a href="игры/index.html" class="menu-item">Игры</a>
+    <div id="levelSelect">
+        <h1>Таверн Дефенс</h1>
+        <button class="level-btn" onclick="startGame(1)">Уровень 1<br><small>5 волн</small></button>
+        <button class="level-btn" onclick="startGame(2)">Уровень 2<br><small>10 волн</small></button>
+        <button class="level-btn" onclick="startGame(3)">Уровень 3<br><small>15 волн</small></button>
+    </div>
+    
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="900" height="600"></canvas>
+        <div id="hud">
+            <div class="hud-item">Монеты: <span id="coins">15</span></div>
+            <div class="hud-item">Волна: <span id="wave">0</span> / <span id="maxWave">5</span></div>
+            <div class="hud-item">Зомби: <span id="zombies">0</span></div>
+        </div>
+        <div id="towerSelect">
+            <button class="tower-btn" id="towerCatapult" onclick="selectTower('catapult')">
+                <div class="tower-name">Катапульта</div>
+                <div class="tower-cost">60 монет</div>
+            </button>
+            <button class="tower-btn" id="towerCrossbow" onclick="selectTower('crossbow')">
+                <div class="tower-name">Арбалет</div>
+                <div class="tower-cost">25 монет</div>
+            </button>
+            <button class="tower-btn" id="towerArcher" onclick="selectTower('archer')">
+                <div class="tower-name">Лучник</div>
+                <div class="tower-cost">10 монет</div>
+            </button>
+        </div>
+        <div id="message">
+            <div id="messageText"></div>
+            <button id="restartBtn" onclick="restartGame()">Заново</button>
         </div>
     </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let gameState = {
+            level: 1,
+            waves: 5,
+            currentWave: 0,
+            coins: 15,
+            selectedTower: null,
+            towers: [],
+            zombies: [],
+            projectiles: [],
+            spots: [],
+            gameOver: false,
+            victory: false
+        };
+        
+        const towerTypes = {
+            catapult: { cost: 60, damage: 40, range: 150, fireRate: 60, color: '#8B4513', name: 'Катапульта' },
+            crossbow: { cost: 25, damage: 20, range: 120, fireRate: 30, color: '#FFD700', name: 'Арбалет' },
+            archer: { cost: 10, damage: 10, range: 100, fireRate: 20, color: '#228B22', name: 'Лучник' }
+        };
+        
+        const path = [
+            { x: 0, y: 100 },
+            { x: 200, y: 100 },
+            { x: 200, y: 300 },
+            { x: 500, y: 300 },
+            { x: 500, y: 100 },
+            { x: 700, y: 100 },
+            { x: 700, y: 500 },
+            { x: 900, y: 500 }
+        ];
+        
+        const initialSpots = [
+            { x: 150, y: 180 },
+            { x: 350, y: 220 },
+            { x: 450, y: 380 }
+        ];
+        
+        function initSpots() {
+            gameState.spots = initialSpots.map(s => ({ ...s, hasTower: false }));
+        }
+        
+        function startGame(level) {
+            gameState.level = level;
+            gameState.waves = level * 5;
+            gameState.currentWave = 0;
+            gameState.coins = 15;
+            gameState.towers = [];
+            gameState.zombies = [];
+            gameState.projectiles = [];
+            gameState.selectedTower = null;
+            gameState.gameOver = false;
+            gameState.victory = false;
+            
+            initSpots();
+            
+            document.getElementById('levelSelect').style.display = 'none';
+            document.getElementById('gameContainer').style.display = 'block';
+            document.getElementById('maxWave').textContent = gameState.waves;
+            
+            updateHUD();
+            gameLoop();
+            
+            setTimeout(() => startWave(), 1000);
+        }
+        
+        function restartGame() {
+            document.getElementById('message').style.display = 'none';
+            document.getElementById('levelSelect').style.display = 'block';
+            document.getElementById('gameContainer').style.display = 'none';
+        }
+        
+        function startWave() {
+            if (gameState.gameOver || gameState.victory) return;
+            
+            gameState.currentWave++;
+            
+            const zombiesInWave = 3 + gameState.currentWave * 2;
+            const hp = 20 + gameState.currentWave * 10;
+            
+            for (let i = 0; i < zombiesInWave; i++) {
+                setTimeout(() => {
+                    if (!gameState.gameOver) {
+                        spawnZombie(hp);
+                    }
+                }, i * 800);
+            }
+            
+            if (gameState.currentWave >= 2 && gameState.currentWave % 2 === 0) {
+                addNewSpot();
+            }
+            
+            updateHUD();
+        }
+        
+        function addNewSpot() {
+            const newSpot = {
+                x: 100 + Math.random() * 700,
+                y: 150 + Math.random() * 350,
+                hasTower: false
+            };
+            gameState.spots.push(newSpot);
+        }
+        
+        function spawnZombie(hp) {
+            const zombie = {
+                x: path[0].x,
+                y: path[0].y,
+                hp: hp,
+                maxHp: hp,
+                speed: 1 + gameState.level * 0.2,
+                pathIndex: 0,
+                dead: false
+            };
+            gameState.zombies.push(zombie);
+            updateHUD();
+        }
+        
+        function selectTower(type) {
+            if (gameState.gameOver) return;
+            
+            const cost = towerTypes[type].cost;
+            if (gameState.coins < cost) return;
+            
+            gameState.selectedTower = type;
+            
+            document.querySelectorAll('.tower-btn').forEach(btn => btn.classList.remove('selected'));
+            document.getElementById('tower' + type.charAt(0).toUpperCase() + type.slice(1)).classList.add('selected');
+        }
+        
+        canvas.addEventListener('click', (e) => {
+            if (gameState.gameOver || !gameState.selectedTower) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            for (let spot of gameState.spots) {
+                if (!spot.hasTower) {
+                    const dist = Math.hypot(x - spot.x, y - spot.y);
+                    if (dist < 30) {
+                        const cost = towerTypes[gameState.selectedTower].cost;
+                        if (gameState.coins >= cost) {
+                            gameState.coins -= cost;
+                            spot.hasTower = true;
+                            gameState.towers.push({
+                                x: spot.x,
+                                y: spot.y,
+                                type: gameState.selectedTower,
+                                cooldown: 0,
+                                target: null
+                            });
+                            
+                            gameState.selectedTower = null;
+                            document.querySelectorAll('.tower-btn').forEach(btn => btn.classList.remove('selected'));
+                            updateHUD();
+                        }
+                        return;
+                    }
+                }
+            }
+        });
+        
+        function updateHUD() {
+            document.getElementById('coins').textContent = gameState.coins;
+            document.getElementById('wave').textContent = gameState.currentWave;
+            document.getElementById('zombies').textContent = gameState.zombies.length;
+            
+            for (let type in towerTypes) {
+                const btn = document.getElementById('tower' + type.charAt(0).toUpperCase() + type.slice(1));
+                if (gameState.coins < towerTypes[type].cost) {
+                    btn.classList.add('disabled');
+                } else {
+                    btn.classList.remove('disabled');
+                }
+            }
+        }
+        
+        function drawPath() {
+            ctx.strokeStyle = '#4a4a4a';
+            ctx.lineWidth = 40;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            ctx.moveTo(path[0].x, path[0].y);
+            for (let i = 1; i < path.length; i++) {
+                ctx.lineTo(path[i].x, path[i].y);
+            }
+            ctx.stroke();
+            
+            ctx.strokeStyle = '#2a2a2a';
+            ctx.lineWidth = 30;
+            ctx.stroke();
+        }
+        
+        function drawSpots() {
+            for (let spot of gameState.spots) {
+                if (!spot.hasTower) {
+                    ctx.fillStyle = 'rgba(0, 212, 255, 0.3)';
+                    ctx.beginPath();
+                    ctx.arc(spot.x, spot.y, 25, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.strokeStyle = '#00d4ff';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+            }
+        }
+        
+        function drawTowers() {
+            for (let tower of gameState.towers) {
+                const type = towerTypes[tower.type];
+                
+                ctx.fillStyle = type.color;
+                ctx.beginPath();
+                ctx.arc(tower.x, tower.y, 20, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 12px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                const icon = tower.type === 'catapult' ? 'К' : tower.type === 'crossbow' ? 'А' : 'Л';
+                ctx.fillText(icon, tower.x, tower.y);
+            }
+        }
+        
+        function drawZombies() {
+            for (let zombie of gameState.zombies) {
+                const ratio = zombie.hp / zombie.maxHp;
+                
+                ctx.fillStyle = '#4a4a4a';
+                ctx.beginPath();
+                ctx.arc(zombie.x, zombie.y, 15, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.strokeStyle = '#2a2a2a';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                ctx.fillStyle = '#8B0000';
+                ctx.beginPath();
+                ctx.arc(zombie.x, zombie.y, 10, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.fillStyle = '#ff0000';
+                ctx.fillRect(zombie.x - 10, zombie.y - 25, 20, 4);
+                ctx.fillStyle = '#00ff00';
+                ctx.fillRect(zombie.x - 10, zombie.y - 25, 20 * ratio, 4);
+            }
+        }
+        
+        function drawProjectiles() {
+            for (let proj of gameState.projectiles) {
+                ctx.fillStyle = proj.color;
+                ctx.beginPath();
+                ctx.arc(proj.x, proj.y, proj.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        
+        function updateZombies() {
+            for (let zombie of gameState.zombies) {
+                if (zombie.dead) continue;
+                
+                const target = path[zombie.pathIndex + 1];
+                if (!target) {
+                    zombie.dead = true;
+                    gameState.gameOver = true;
+                    showMessage('Зомби прорвали оборону!');
+                    return;
+                }
+                
+                const dx = target.x - zombie.x;
+                const dy = target.y - zombie.y;
+                const dist = Math.hypot(dx, dy);
+                
+                if (dist < zombie.speed) {
+                    zombie.pathIndex++;
+                } else {
+                    zombie.x += (dx / dist) * zombie.speed;
+                    zombie.y += (dy / dist) * zombie.speed;
+                }
+            }
+            
+            gameState.zombies = gameState.zombies.filter(z => !z.dead);
+            updateHUD();
+        }
+        
+        function updateTowers() {
+            for (let tower of gameState.towers) {
+                const type = towerTypes[tower.type];
+                
+                if (tower.cooldown > 0) {
+                    tower.cooldown--;
+                    continue;
+                }
+                
+                let closestZombie = null;
+                let closestDist = type.range;
+                
+                for (let zombie of gameState.zombies) {
+                    const dist = Math.hypot(zombie.x - tower.x, zombie.y - tower.y);
+                    if (dist < closestDist) {
+                        closestDist = dist;
+                        closestZombie = zombie;
+                    }
+                }
+                
+                if (closestZombie) {
+                    tower.target = closestZombie;
+                    tower.cooldown = type.fireRate;
+                    
+                    gameState.projectiles.push({
+                        x: tower.x,
+                        y: tower.y,
+                        targetX: closestZombie.x,
+                        targetY: closestZombie.y,
+                        target: closestZombie,
+                        speed: 8,
+                        damage: type.damage,
+                        color: type.color
+                    });
+                }
+            }
+        }
+        
+        function updateProjectiles() {
+            for (let proj of gameState.projectiles) {
+                if (proj.target && !proj.target.dead) {
+                    proj.targetX = proj.target.x;
+                    proj.targetY = proj.target.y;
+                }
+                
+                const dx = proj.targetX - proj.x;
+                const dy = proj.targetY - proj.y;
+                const dist = Math.hypot(dx, dy);
+                
+                if (dist < proj.speed) {
+                    if (proj.target && !proj.target.dead) {
+                        proj.target.hp -= proj.damage;
+                        if (proj.target.hp <= 0) {
+                            proj.target.dead = true;
+                            gameState.coins += 15;
+                            updateHUD();
+                        }
+                    }
+                    proj.hit = true;
+                } else {
+                    proj.x += (dx / dist) * proj.speed;
+                    proj.y += (dy / dist) * proj.speed;
+                    proj.size = 4;
+                }
+            }
+            
+            gameState.projectiles = gameState.projectiles.filter(p => !p.hit);
+        }
+        
+        function checkWaveComplete() {
+            if (gameState.currentWave >= gameState.waves && gameState.zombies.length === 0 && !gameState.gameOver && !gameState.victory) {
+                gameState.victory = true;
+                showMessage('Победа! Все волны пройдены!');
+            }
+            
+            if (gameState.zombies.length === 0 && gameState.currentWave < gameState.waves && !gameState.gameOver && !gameState.victory) {
+                setTimeout(() => {
+                    if (!gameState.gameOver && !gameState.victory) {
+                        startWave();
+                    }
+                }, 2000);
+            }
+        }
+        
+        function showMessage(text) {
+            document.getElementById('messageText').textContent = text;
+            document.getElementById('message').style.display = 'block';
+        }
+        
+        function draw() {
+            ctx.fillStyle = '#1a1a2e';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            drawPath();
+            drawSpots();
+            drawTowers();
+            drawZombies();
+            drawProjectiles();
+        }
+        
+        function gameLoop() {
+            if (!gameState.gameOver && !gameState.victory) {
+                updateZombies();
+                updateTowers();
+                updateProjectiles();
+                checkWaveComplete();
+            }
+            
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+    </script>
 </body>
 </html>
